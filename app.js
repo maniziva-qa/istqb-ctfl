@@ -908,10 +908,10 @@ function renderProgressPage() {
     </div>
 
     <div style="text-align:center; margin-top:20px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap">
-      <button class="btn btn-danger btn-sm" onclick="if(confirm('Reset all progress?')) { localStorage.removeItem('istqb_progress'); state.progress={}; renderProgressPage(); showToast('Progress reset'); }">
+      <button class="btn btn-danger btn-sm" onclick="if(confirm('Reset all progress?')) { localStorage.removeItem('istqb_progress'); state.progress={}; resetSupabaseProgress(); renderProgressPage(); showToast('Progress reset'); }">
         Reset Progress
       </button>
-      <button class="btn btn-outline btn-sm" onclick="if(confirm('Reset daily log?')) { localStorage.removeItem('istqb_daily'); state.daily={}; renderProgressPage(); showToast('Daily log reset'); }">
+      <button class="btn btn-outline btn-sm" onclick="if(confirm('Reset daily log?')) { localStorage.removeItem('istqb_daily'); state.daily={}; resetSupabaseDaily(); renderProgressPage(); showToast('Daily log reset'); }">
         Reset Daily Log
       </button>
     </div>
@@ -1001,6 +1001,7 @@ function saveProgress(chapterId, correct, qId) {
   if (correct) state.progress[chapterId].correct++;
   if (!state.progress[chapterId].seen.includes(qId)) state.progress[chapterId].seen.push(qId);
   localStorage.setItem('istqb_progress', JSON.stringify(state.progress));
+  syncProgressToSupabase(chapterId);
 
   // Daily tracking
   const today = new Date().toISOString().slice(0, 10);
@@ -1008,6 +1009,7 @@ function saveProgress(chapterId, correct, qId) {
   state.daily[today].attempted++;
   if (correct) state.daily[today].correct++;
   localStorage.setItem('istqb_daily', JSON.stringify(state.daily));
+  syncDailyToSupabase(today);
 }
 
 function saveDailyTime(minutes) {
@@ -1015,6 +1017,7 @@ function saveDailyTime(minutes) {
   if (!state.daily[today]) state.daily[today] = { attempted: 0, correct: 0, minutes: 0 };
   state.daily[today].minutes += minutes;
   localStorage.setItem('istqb_daily', JSON.stringify(state.daily));
+  syncDailyToSupabase(today);
 }
 
 function showToast(msg) {
@@ -1028,7 +1031,9 @@ function showToast(msg) {
 }
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSupabase();
+
   renderHome();
 
   // Scroll to top button
